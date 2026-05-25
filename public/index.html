@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Expense">
+<meta name="description" content="Daily expense tracker dengan dashboard kategori, label, dan PIC">
+<title>Daily Expense</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+  --surface:#1e293b;--surface2:#263348;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --accent:#38bdf8;--accent-bg:rgba(56,189,248,0.12);
+  --success:#34d399;--success-bg:rgba(52,211,153,0.12);
+  --danger:#f87171;--danger-bg:rgba(248,113,113,0.12);
+  --warning:#fbbf24;--warning-bg:rgba(251,191,36,0.12);
+  --radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative}
+
+/* Loading overlay */
+#loading-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.85);z-index:2000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-overlay span{font-size:13px;color:var(--text2)}
+
+/* Header */
+.header{padding:calc(var(--safe-top) + 12px) 20px 12px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.header-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.header-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.sync-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all 0.2s}
+.sync-btn:hover{background:var(--bg3);color:var(--text)}
+.sync-btn.spinning{animation:spin 1s linear infinite}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0}
+.sync-dot.offline{background:var(--warning)}
+.sync-dot.error{background:var(--danger)}
+
+/* Content */
+.content{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-bottom) + 70px)}
+.page{display:none;padding:16px}
+.page.active{display:block}
+
+/* Bottom Nav */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding-bottom:var(--safe-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500;gap:4px;transition:color 0.2s;border:none;background:none;font-family:'DM Sans',sans-serif}
+.nav-item svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item.active{color:var(--accent)}
+.nav-item.active svg{stroke:var(--accent)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+
+/* Metrics */
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.metric{background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:6px}
+.metric-value{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.metric-value.small{font-size:15px}
+.metric-change{font-size:11px;margin-top:4px}
+.metric-change.up{color:var(--danger)}
+.metric-change.down{color:var(--success)}
+
+/* Bar chart */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-name{width:90px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:20px;background:var(--bg3);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 0.6s cubic-bezier(.34,1.56,.64,1)}
+.bar-val{font-size:10px;font-weight:600;color:rgba(255,255,255,0.9)}
+
+/* Expense item */
+.exp-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.exp-item:last-child{border-bottom:none}
+.exp-avatar{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.exp-body{flex:1;min-width:0}
+.exp-title{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-meta{font-size:11px;color:var(--text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.exp-right{text-align:right;flex-shrink:0}
+.exp-amount{font-size:14px;font-weight:600;color:var(--text)}
+.exp-date{font-size:11px;color:var(--text3);margin-top:2px}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500}
+
+/* Form */
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+select.form-input option{background:var(--bg2)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.tag{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text2);transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.tag.on{border-color:transparent;color:#fff}
+
+/* Buttons */
+.btn{padding:12px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#0f172a;width:100%;justify-content:center}
+.btn-primary:hover{opacity:0.9}
+.btn-primary:active{transform:scale(0.98)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-danger-ghost{background:transparent;border:1px solid var(--border);color:var(--danger);padding:6px 10px;font-size:12px;border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:var(--radius-sm)}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text2);white-space:nowrap;font-family:'DM Sans',sans-serif;flex-shrink:0;transition:all 0.15s}
+.filter-chip.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.list-total{font-size:12px;color:var(--text3);margin-bottom:10px;text-align:right}
+
+/* Settings */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-name{font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px}
+.color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.add-row{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.color-pick{width:38px;height:38px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:none;padding:3px;cursor:pointer;flex-shrink:0}
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:20px 0 10px}
+.section-label:first-child{margin-top:0}
+
+/* Log */
+.log-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+.log-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.log-body{flex:1;min-width:0}
+.log-action{font-size:12px;font-weight:600;margin-bottom:2px}
+.log-detail{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-time{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* Toast */
+#toast{position:fixed;bottom:calc(var(--safe-bottom)+80px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:30px;font-size:13px;font-weight:500;opacity:0;transition:all 0.3s;pointer-events:none;z-index:9999;white-space:nowrap;max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Banners */
+#install-banner{background:var(--accent-bg);border:1px solid rgba(56,189,248,0.3);border-radius:var(--radius);padding:12px 16px;margin:0 16px 12px;display:none;align-items:center;gap:12px}
+#install-banner.show{display:flex}
+.install-text{flex:1;font-size:13px;color:var(--accent)}
+.install-btn{background:var(--accent);color:#0f172a;border:none;padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+#offline-banner{background:var(--warning-bg);border-bottom:1px solid rgba(251,191,36,0.3);padding:8px 16px;text-align:center;font-size:12px;color:var(--warning);display:none}
+#offline-banner.show{display:block}
+
+/* Empty */
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:0.4}
+.empty-text{font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay"><div class="spinner"></div><span>Memuat...</span></div>
+
+<div id="offline-banner">⚠️ Offline — tidak bisa mengambil data real-time</div>
+<div id="install-banner">
+  <div class="install-text">📱 Install sebagai app di Android</div>
+  <button class="install-btn" id="install-btn">Install</button>
+  <button style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer" id="install-dismiss">×</button>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">
+        Daily Expense
+        <span class="sync-dot" id="sync-dot"></span>
+      </div>
+      <div class="header-sub" id="header-sub">Menghubungkan...</div>
+    </div>
+    <button class="sync-btn" id="sync-btn" title="Refresh data" onclick="syncNow()">⟳</button>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="metric-grid" id="metrics"></div>
+      <div class="card">
+        <div class="card-title">📊 Per Kategori — bulan ini</div>
+        <div id="chart-cat"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">👤 Per PIC — bulan ini</div>
+        <div id="chart-pic"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🕐 Terbaru</div>
+        <div id="recent"></div>
+      </div>
+    </div>
+
+    <!-- TAMBAH -->
+    <div id="page-add" class="page">
+      <div class="card">
+        <div class="section-label">Tambah pengeluaran</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tanggal</label>
+            <input type="date" id="f-date" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jumlah (Rp)</label>
+            <input type="number" id="f-amount" class="form-input" placeholder="0" inputmode="numeric">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Keterangan</label>
+          <input type="text" id="f-desc" class="form-input" placeholder="Deskripsi pengeluaran...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Kategori</label>
+            <select id="f-cat" class="form-input"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">PIC</label>
+            <select id="f-pic" class="form-input"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Label</label>
+          <div class="tag-wrap" id="f-labels"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catatan</label>
+          <textarea id="f-note" class="form-input" rows="2" placeholder="Opsional..." style="resize:none"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveExpense()">Simpan pengeluaran</button>
+      </div>
+    </div>
+
+    <!-- RIWAYAT -->
+    <div id="page-list" class="page">
+      <div class="filter-bar" id="filter-cats"></div>
+      <div class="filter-bar" id="filter-pics"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <select id="filter-month-sel" class="form-input" style="flex:1;margin:0;font-size:12px;padding:7px 10px" onchange="setFilterMonth(this.value)"></select>
+      </div>
+      <div class="list-total" id="list-total"></div>
+      <div id="expense-list"></div>
+    </div>
+
+    <!-- HISTORY LOG -->
+    <div id="page-log" class="page">
+      <div class="card">
+        <div class="card-title">📋 Aktivitas terbaru (100 terakhir)</div>
+        <div id="log-list">
+          <div class="empty"><div class="empty-text">Memuat...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PENGATURAN -->
+    <div id="page-settings" class="page">
+      <div class="card">
+        <div class="section-label">Kategori</div>
+        <div class="add-row">
+          <input type="text" id="new-cat" class="form-input" placeholder="Nama kategori" style="margin:0">
+          <input type="color" id="new-cat-color" class="color-pick" value="#38bdf8">
+          <button class="btn btn-ghost btn-sm" onclick="addCategory()">+ Tambah</button>
+        </div>
+        <div id="cat-settings"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">Label</div>
+        <div class="add-row">
+          <input type="text" id="new-label" class="form-input" placeholder="Nama label" style="margin:0">
+          <input type="color" id="new-label-color" class="color-pick" value="#34d399">
+          <button class="btn btn-ghost btn-sm" onclick="addLabel()">+ Tambah</button>
+        </div>
+        <div id="label-settings"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">PIC</div>
+        <div class="add-row">
+          <input type="text" id="new-pic" class="form-input" placeholder="Nama PIC" style="margin:0">
+          <button class="btn btn-ghost btn-sm" onclick="addPIC()">+ Tambah</button>
+        </div>
+        <div id="pic-settings"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">Koneksi Supabase</div>
+        <div class="form-group">
+          <label class="form-label">Supabase URL</label>
+          <input type="text" id="sb-url" class="form-input" placeholder="https://xxxx.supabase.co">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Anon Key</label>
+          <input type="text" id="sb-key" class="form-input" placeholder="eyJhbGci...">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="saveSupabaseConfig()">Simpan</button>
+          <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="testSupabase()">Test koneksi</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-label">Export / Backup</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportJSON()" style="flex:1;justify-content:center">Export JSON</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()" style="flex:1;justify-content:center">Export CSV</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showPage('dashboard',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="showPage('add',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Tambah
+    </button>
+    <button class="nav-item" onclick="showPage('list',this)">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r=".5" fill="currentColor"/><circle cx="3.5" cy="12" r=".5" fill="currentColor"/><circle cx="3.5" cy="18" r=".5" fill="currentColor"/></svg>
+      Riwayat
+    </button>
+    <button class="nav-item" onclick="showPage('log',this)">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Log
+    </button>
+    <button class="nav-item" onclick="showPage('settings',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Pengaturan
+    </button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script src="/app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(r => console.log('SW:', r.scope))
+      .catch(e => console.log('SW fail:', e));
+  }
+</script>
+</body>
+</html>
