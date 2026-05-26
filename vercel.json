@@ -1,14 +1,1 @@
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/public/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/public/sw.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
-      ]
-    }
-  ]
-}
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] } 

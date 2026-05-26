@@ -1,0 +1,36 @@
+{
+  "name": "Daily Expense Tracker",
+  "short_name": "Expense",
+  "description": "Catat pengeluaran harian per kategori, label, dan PIC",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "id",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Tambah Pengeluaran",
+      "short_name": "Tambah",
+      "description": "Langsung tambah pengeluaran baru",
+      "url": "/?page=add",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
